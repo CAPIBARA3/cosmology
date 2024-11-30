@@ -1,34 +1,31 @@
 ### search for "added afterwards" for changes
 
 
-# importing libraries
+# Importing libraries
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
 import numpy as np
 from scipy.optimize import curve_fit
-import xlwings as xw
+
+# Defining global paths and useful variables/functions
 dirpath = os.path.dirname(os.path.abspath(__file__))
-### added afterwards data_path = f'{dirpath}/SNCOSMO/Results-copy'
-data_path = f'/Users/j.alcaide/Documents/ICE_FASE2JiC/SNCOSMO/Results-copy' # added afterwards
-path_redshift = '/Users/j.alcaide/Desktop/Joves i Ciència/article/Hubble computing/without_outliners/copy_redshift.xlsx'
-dist_path = '/Users/j.alcaide/Desktop/Joves i Ciència/article/Hubble computing/without_outliners/copy_I_distances.txt'
+data_path = f'~/Library/Mobile Documents/com~apple~CloudDocs/ICE_FASE2JiC/SNCOSMO/Results-copy'
 def to_rgb(a,b,c):
     return (a/255, b/255, c/255)
 
-# SN
-# Read SN data
-#df = pd.read_csv(f'{data_path}/COPY_Results_SNCOSMO.csv')
+# Read SNe data
 df = pd.read_csv(f'{data_path}/Results_SNCOSMO.csv')
 df = df.dropna()
 
-# applying cuts for clear outliners
+# Apply cuts for outliners
+# TODO: join both cuts sections
 df = df[df['dm']>0]
 df = df[df['dm']<40]
 df = df[df['dmerr']>0]
 df = df[df['dmerr']<5]
 
-# applying additional cuts
+# apply additional cuts
 dropping = list()
 for index, row in df.iterrows():
     if row[2]>0.1 and row[3]<36:
@@ -38,12 +35,11 @@ for index, row in df.iterrows():
     #         dropping.append(index)
 df = df.drop(dropping)
 
-# Creating variables
+# Initializing variables
 names = np.array(df['name'])
 redshifts = np.array(df['redshift'])
 dms = np.array(df['dm'])
 dm_errs = np.array(df['dmerr'])
-
 
 # Compute additional magnitudes (velocity & distance)
 velocities = redshifts * 299792.458 # km/s
@@ -53,6 +49,7 @@ distances /= 1000000 # to Mpc
 sigma_distances /= 1000000 # to Mpc
 
 # remove error in sigma distances (huge, weird errorbars)
+# TODO: how to solve this problem with the error bars
 new_values = list()
 for value in sigma_distances:
     if value > 0.01* (10**6):
@@ -196,3 +193,63 @@ plt.tight_layout()
 plt.legend()
 random_fig.savefig('max_randomness.png',dpi=300)
 ###################################################################################################################################################################################################################################################
+
+
+plt.figure(figsize=(10, 6))
+plt.scatter(redshifts, dms, label='Supernova Data', color='blue', s=10)
+plt.errorbar(redshifts, dms, yerr=dm_errs, fmt='none', color='lightblue', alpha=0.7)
+
+# Add the best-fit cosmological model
+plt.plot(z, distmod_bestfit_flat, label=f'Best Fit (Flat): $H_0$={H0_best_flat:.2f}, $\Omega_m$={Om0_best_flat:.2f}', color='red', linewidth=1.5)
+plt.plot(z, distmod_bestfit_lam, label=f'Best Fit (LambdaCDM): $H_0$={H0_best_lam:.2f}, $\Omega_m$={Om0_best_lam:.2f}, $\Omega_\Lambda$={Ode0_best_lam:.2f}', color='orange', linestyle='dashed', linewidth=1.5)
+
+cosmo_low = LambdaCDM(H0=50.0, Om0=0.1, Ode0=0.1)
+cosmo_high = LambdaCDM(H0=100.0, Om0=1.0, Ode0=1.0)
+distmod_low = cosmo_low.distmod(z)
+distmod_high = cosmo_high.distmod(z)
+# distmod_low = distmod_low.to_value()
+# distmod_high = distmod_high.to_value()
+plt.fill_between(z, distmod_low.value, distmod_high.value, label='error ranges', color='green', linewidth=1.5, alpha=0.3)
+
+# Customize the plot
+plt.title('Supernova Data with Fitted Cosmological Models', fontsize=14)
+plt.xlabel('Redshift $z$', fontsize=12)
+plt.ylabel('Distance Modulus $\mu$', fontsize=12)
+plt.legend(fontsize=10)
+plt.grid(alpha=0.3)
+plt.savefig('supernova_with_fits.png', dpi=300)
+plt.show()
+
+from scipy.constants import G, parsec
+
+# Convert Hubble constant to SI units (H0 [1/s])
+H0_si = H0_best_flat * 1e3 / (parsec * 1e6)  # Convert from km/s/Mpc to 1/s
+
+# Critical density calculation
+rho_c = (3 * H0_si**2) / (8 * np.pi * G)  # kg/m^3
+
+# Convert to alternative units (solar masses per cubic parsec)
+solar_mass = 1.989e30  # kg
+rho_c_solar = rho_c / (solar_mass / parsec**3)  # M_sun/pc^3
+
+print(f"Critical Density: {rho_c:.2e} kg/m^3")
+print(f"Critical Density: {rho_c_solar:.2e} M_sun/pc^3")
+
+# Age of the Universe
+from scipy.integrate import quad
+
+def hubble_inverse(z, H0, Om0, Ode0):
+    cosmo = LambdaCDM(H0=H0, Om0=Om0, Ode0=Ode0)
+    return 1 / cosmo.H(z).value
+
+age, _ = quad(hubble_inverse, 0, np.inf, args=(H0_best_lam, Om0_best_lam, Ode0_best_lam))
+age_gyr = age / 1e9  # Convert from years to Gyr
+print(f"Age of the Universe: {age_gyr:.2f} Gyr")
+
+# Deceleration parameter
+q0 = Om0_best_lam / 2 - Ode0_best_lam
+print(f"Deceleration Parameter (q0): {q0:.2f}")
+
+# Evolution of densities
+Om_z = Om_z  # Matter density evolution (already computed in your code)
+Ode_z = Ode_z  # Dark energy density evolution (already computed in your code)
