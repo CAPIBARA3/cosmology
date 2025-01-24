@@ -4,7 +4,8 @@ from scipy.stats import norm
 import pandas as pd
 import os
 dirpath = os.path.dirname(os.path.abspath(__file__))
-data_path = dirpath+'/ICE_FASE2JiC/dataset.csv'
+# data_path = dirpath+'/ICE_FASE2JiC/dataset.csv'
+data_path = "/Users/joanalnu/Library/Mobile Documents/com~apple~CloudDocs/ICE_FASE2JiC/dataset.csv"
 
 # data input
 df = pd.read_csv(data_path)
