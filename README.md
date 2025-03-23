@@ -1,7 +1,7 @@
 # Cosmology
-Repository for the GRB Cosmolgy Research Iniative within the CAPIBARA Collaboration. This repository contains preliminar code for data analysis and cosmology research. The repository is divide into the following directoryes:
+Repository for the [GRB Cosmolgy Research Iniative](https://capibara3.github.io/research/grb_cosmology.html) within the CAPIBARA Collaboration. This repository contains preliminar code for data analysis and cosmology research. The repository is divided into the following directories:
 
-* `comparingH0`: code for the comparison of differente $H_0$ results and studying the Hubble Tension, aka Crisis in Cosmology.
+* `comparingH0`: code for the comparison of different $H_0$ results and studying the Hubble Tension, aka Crisis in Cosmology.
 * `gw`: code to study the characteristics of GRB Gravitational wave counterpart detections.
 * `simulations`: code from previous project, cosmological simulations using astropy models.
 
