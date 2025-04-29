@@ -3,6 +3,10 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 import matplotlib.colors as mcolors
 
+
+def mean_cov_without_errors(x, y):
+    return np.mean(x, y), np.cov(x, y)
+
 def mean_cov(x, y, x_sig, y_sig):
     x_weights = 1 / (x_sig**2) # weights are inverse of variance
     y_weights = 1 / (y_sig**2)
@@ -40,10 +44,12 @@ def plot_confidence_ellipse(ax, mean, cov, n_std=1.0, **kwargs):
     ax.add_patch(ellipse)
 
 def plot_confidence_region(ax, x_data, y_data, label, std_dev=[1, 2], **kwargs):
-    x, xerr = x_data[0], x_data[1]
-    y, yerr = y_data[0], y_data[1]
-    print(x, y, xerr, yerr)
-    mean, cov = mean_cov(x, y, xerr, yerr)
+    if isinstance(x_data, tuple):
+        x, xerr = np.asarray(x_data[0]), np.asarray(x_data[1])
+        y, yerr = np.asarray(y_data[0]), np.asarray(y_data[1])
+        mean, cov = mean_cov(x, y, xerr, yerr)
+    else:
+        mean, cov = mean_cov_without_errors(x_data, y_data)
 
     for i in std_dev:
         if i != 1:
@@ -101,99 +107,11 @@ for i, name in enumerate(names):
     plt.errorbar(H0[0][i], Om[0][i], xerr=H0[1][i], yerr=Om[1][i], fmt='o', label=name, capsize=5, color=colors[i])
 
 # for i, name in enumerate(names):
-#     plt.annotate(name, H0[0][i], Om[0][1], textcoords="offset points", xytext=(0,10), ha='center')
+#     plt.annotate(name, H0[0][i], Om[0][i], textcoords="offset points", xytext=(0,10), ha='center')
 
 for i, data in enumerate([data(), CB_data(), DL_data()]):
     sample_id = ['general', 'CMB-BAO', 'DL']
     plot_confidence_region(plt.gca(), data[0], data[1], sample_id[i], std_dev=[1, 2], edgecolor=colors[i], facecolor=colors[i])
-
-# read data from dataset(); https://arxiv.org/abs/2103.01183
-import pandas as pd
-import os
-
-class ValentinoData:
-    def __init__(self, file_path="./dataset.csv"):
-        try:
-            self.df = pd.read_csv(file_path)
-            self._validate_columns()
-            self.values = self.df['Value']
-            self.low_sigma = self.df['Lower']
-            self.high_sigma = self.df['Upper']
-            self.types = self.df['Type']
-            self.detections = self.df['Direct/Indirect']
-            self.colors = self._map_colors()
-        except FileNotFoundError:
-            print(f"Error: The file {file_path} was not found.")
-            self.df = None
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            self.df = None
-
-    def _validate_columns(self):
-        """Validates that the required columns exist in the DataFrame."""
-        required_columns = ['Value', 'Lower', 'Upper', 'Type']
-        for column in required_columns:
-            if column not in self.df.columns:
-                raise ValueError(f"Missing required column: {column}")
-
-    def _map_colors(self):
-        """Maps types to colors based on predefined rules."""
-        color_mapping = {
-            'Cepheids': 'red', 'Cepheids-SNIa': 'orange', 'CMB with Planck': 'black',
-            'CMB without Planck': 'gold', 'GW related': 'green', 'HII galaxies': 'pink',
-            'Lensing related; mass model-dependent': 'pink', 'Masers': 'pink',
-            'Miras-SNIa': 'pink', 'No CMB; with BBN': 'pink', 'Optimistic average': 'pink',
-            'Pl(k) + CMB lensing': 'pink', 'SNII': 'pink',
-            'Surface Brightness Fluctuations': 'pink', 'TRGB-SNIa': 'firebrick',
-            'Tully-Fisher Relation': 'pink',
-            'Ultra-conservative; no cepheids; no lensing': 'pink',
-            'BAO': 'coral', 'SNIa-BAO': 'sandybrown', 'other': 'pink',
-            'SNIa': 'orange', 'TRGB': 'firebrick'
-        }
-        return list(self.types.replace(color_mapping))
-
-    def get_data(self):
-        """Returns the values and their corresponding sigma limits.
-
-        Returns:
-            tuple: A tuple containing values and a tuple of lower and upper sigma limits.
-        """
-        return (self.values, (self.low_sigma, self.high_sigma))
-
-    def get_colors(self):
-        """Returns the color mapping for the types.
-
-        Returns:
-            list: A list of colors corresponding to the types.
-        """
-        return self.colors
-
-    def get_detection(self):
-        return self.detections
-
-
-vd = ValentinoData()
-
-detections = vd.get_detection()
-values, errors = vd.get_data()
-
-for type, default_omega in zip(['Direct', 'Indirect'], [(0.25, 0.01), (0.35, 0.01)]):
-    H0 = list()
-    H0_err = list()
-    for i, detection in enumerate(detections):
-        if detection == type:
-            H0.append(values[i])
-            H0_err.append((errors[0]+errors[1])/2)
-    H0 = np.array(H0), np.array(H0_err)
-    Om = np.full(len(H0), default_omega[0]), np.full(len(H0), default_omega[1])
-    for i, data in enumerate((H0, Om)):
-        plot_confidence_region(plt.gca(), data[0], data[1],'', std_dev=[1, 2], edgecolor=colors[i], facecolor=colors[i])
-
-
-
-
-
-
 
 
 # for i, (H0_data, Om_data, H0_err_data, Om_err_data) in enumerate(zip((BG_H0, DL_H0), (BG_Om, DL_Om), (BG_H0_err, DL_H0_err), (BG_Om_err, DL_Om_err))):
@@ -201,13 +119,65 @@ for type, default_omega in zip(['Direct', 'Indirect'], [(0.25, 0.01), (0.35, 0.0
 #     plot_confidence_ellipse(plt.gca(), mean, cov, n_std=1, edgecolor=colors[i], facecolor=colors[i], fill=True, alpha=0.6, label=f"$1 \sigma$ {names[i]}")
 #     plot_confidence_ellipse(plt.gca(), mean, cov, n_std=2, edgecolor=colors[i], facecolor=colors[i], fill=True, alpha=0.2, label=f"$2 \sigma$ {names[i]}")
 
+import pandas as pd
+class read_data:
+    def __init__(self, file_path="./dataset.csv"):
+        try:
+            self.df = pd.read_csv(file_path)
+            self.hubble = self.df['H0']
+            self.hubble_sigma = self.df['sigmaH0']
+            self.Om = self.df['Om']
+            self.Om_sigma = self.df['sigmaOm']
+            self.Ode = self.df['Ode']
+            self.Ode_sigma = self.df['sigmaOde']
+            self.dataset = self.df['Dataset']
+            self.year = self.df['Year']
+        except FileNotFoundError:
+            print(f"Error: The file {file_path} was not found.")
+            self.df = None
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            self.df = None
+
+    def get_hubble(self):
+        return (np.array(self.hubble), np.array(self.hubble_sigma))
+
+    def get_matter(self):
+        return (np.array(self.Om), np.array(self.Om_sigma))
+
+    def get_lambda(self):
+        return (np.array(self.Ode), np.array(self.Ode_sigma))
+
+    def get_detection(self):
+        return np.array(self.detections)
+
+    def get_dataset(self):
+        return self.dataset
+
+    def get_year(self):
+        return self.year
+
+
+rd = read_data()
+H0, H0_err = rd.get_hubble()
+Om, Om_err = rd.get_matter()
+
+for i, name, year in zip(range(len(H0)), rd.get_dataset(), rd.get_year()):
+    plt.errorbar(H0[i], Om[i], xerr=H0_err[i], yerr=Om_err[i], label=name+f' ({year})', fmt='o', capsize=5, color=colors[i])
+
+# without discriminating over detection types
+mean, cov = mean_cov(H0, Om, H0_err, Om_err)
+plot_confidence_ellipse(plt.gca(), mean, cov, n_std=1, edgecolor='red', facecolor='red', fill=True, alpha=0.6, label='1σ Confidence Region')
+plot_confidence_ellipse(plt.gca(), mean, cov, n_std=2, edgecolor='red', facecolor='red', fill=True, alpha=0.2, label='2σ Confidence Region')
 
 # Set limits and labels
-plt.xlim(63, 76)
-plt.ylim(0.225, 0.375)
+plt.xlim(64, 76)
+plt.ylim(0.26, 0.36)
 plt.xlabel('$H_0$ (km/s/Mpc)')
 plt.ylabel('$\Omega_m$')
 plt.title('Confidence Regions for $H_0$ and $\Omega_m$')
-plt.legend()
+plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
 plt.grid()
 plt.show()
+
+plt.savefig('Om-H0.png')
