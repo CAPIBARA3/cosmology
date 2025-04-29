@@ -1,4 +1,10 @@
-.ipynb_checkpoints/
+# general files
 .idea/
 .DS_Store
-.virtual_documents/
+
+# ipynb checkpoints
+.ipynb_checkpoints
+.virtual_documents
+gw/.ipynb_checkpoints
+simulations/.ipynb_checkpoints
+simulations/.virtual_documents
