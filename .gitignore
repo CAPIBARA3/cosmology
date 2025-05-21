@@ -8,3 +8,5 @@
 gw/.ipynb_checkpoints
 simulations/.ipynb_checkpoints
 simulations/.virtual_documents
+brane-theory-sims/__pycache__/
+friedmann/__pycache__/
