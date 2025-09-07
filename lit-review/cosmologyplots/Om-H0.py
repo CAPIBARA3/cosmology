@@ -178,6 +178,5 @@ plt.ylabel('$\Omega_m$')
 plt.title('Confidence Regions for $H_0$ and $\Omega_m$')
 plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
 plt.grid()
-plt.show()
-
 plt.savefig('Om-H0.png')
+plt.show()
